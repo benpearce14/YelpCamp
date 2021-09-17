@@ -1,6 +1,5 @@
 <% layout('layouts/boilerplate')%>
 <link rel="stylesheet" href="/css/stars.css" />
-
 <div class="row">
 	<div class="col-6">
 		<div id="campgroundCarousel" class="carousel slide" data-ride="carousel">
@@ -64,7 +63,11 @@
 			<div class="card-footer text-muted">2 days ago</div>
 		</div>
 	</div>
+
 	<div class="col-6">
+		<div class="mb-3">
+			<div id="map"></div>
+		</div>
 		<% if(currentUser){ %>
 		<h2>Leave a Review</h2>
 		<form
@@ -134,3 +137,8 @@
 		<% } %>
 	</div>
 </div>
+<script>
+	const mapboxToken = "<%-process.env.MAPBOX_TOKEN%>";
+	const campground = <%-JSON.stringify(campground) %>;
+</script>
+<script src="/js/showPageMap.js"></script>
