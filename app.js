@@ -14,14 +14,16 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user");
 const helmet = require("helmet");
-const favicon = require("serve-favicon");
 const mongoSanitize = require("express-mongo-sanitize");
-
 const userRoutes = require("./routes/users");
 const campgroundRoutes = require("./routes/campgrounds");
 const reviewRoutes = require("./routes/reviews");
 
-mongoose.connect("mongodb://localhost:27017/yelp-camp", {
+const MongoDBStore = require("connect-mongo")(session);
+
+const dbUrl = process.env.DB_URL || "mongodb://localhost:27017/yelp-camp";
+
+mongoose.connect(dbUrl, {
 	useNewUrlParser: true,
 	useCreateIndex: true,
 	useUnifiedTopology: true,
@@ -43,16 +45,27 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, "public")));
-app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
 app.use(
 	mongoSanitize({
 		replaceWith: "_",
 	})
 );
+const secret = process.env.SECRET || "thisshouldbeabettersecret!";
+
+const store = new MongoDBStore({
+	url: dbUrl,
+	secret,
+	touchAfter: 24 * 60 * 60,
+});
+
+store.on("error", function (e) {
+	console.log("SESSION STORE ERROR", e);
+});
 
 const sessionConfig = {
+	store,
 	name: "session",
-	secret: "thisshouldbeabettersecret!",
+	secret,
 	resave: false,
 	saveUninitialized: true,
 	cookie: {
@@ -97,13 +110,14 @@ app.use(
 			scriptSrc: ["'unsafe-inline'", "'self'", ...scriptSrcUrls],
 			styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
 			workerSrc: ["'self'", "blob:"],
+			childSrc: ["blob:"],
 			objectSrc: [],
 			imgSrc: [
 				"'self'",
 				"blob:",
 				"data:",
 				"https://res.cloudinary.com/dsc8tgwww/", //SHOULD MATCH YOUR CLOUDINARY ACCOUNT!
-				"https://images.unsplash.com/",
+				"https://images.unsplash.com",
 			],
 			fontSrc: ["'self'", ...fontSrcUrls],
 		},
@@ -142,6 +156,7 @@ app.use((err, req, res, next) => {
 	res.status(statusCode).render("error", { err });
 });
 
-app.listen(3000, () => {
-	console.log("Serving on port 3000");
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+	console.log(`Serving on port ${port}`);
 });
